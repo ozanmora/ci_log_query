@@ -11,40 +11,39 @@ class Log_Query
 	protected $_date_fmt = 'Y-m-d H:i:s';
 	protected $_file_ext;
 	protected $_enabled = true;
-	protected $_levels = array('ERROR' => 1, 'DEBUG' => 2, 'INFO' => 3, 'ALL' => 4);
     protected static $func_overload;
     
     function __construct()
     {
         $this->CI =& get_instance();
-        
-		$config =& get_config();
-        
+
+        $config =& get_config();
+
         isset(self::$func_overload) OR self::$func_overload = (extension_loaded('mbstring') && ini_get('mbstring.func_overload'));
-
         
-		$this->_log_path = ($config['log_path'] !== '') ? rtrim($config['log_path'], '/\\').DIRECTORY_SEPARATOR : APPPATH.'logs'.DIRECTORY_SEPARATOR;
-		$this->_file_ext = (isset($config['log_file_extension']) && $config['log_file_extension'] !== '') ? ltrim($config['log_file_extension'], '.') : 'php';
-
+        $this->_log_path = ($config['log_path'] !== '') ? rtrim($config['log_path'], '/\\').DIRECTORY_SEPARATOR : APPPATH.'logs'.DIRECTORY_SEPARATOR;
+        $this->_file_ext = (isset($config['log_file_extension']) && $config['log_file_extension'] !== '') ? ltrim($config['log_file_extension'], '.') : 'php';
+        
         file_exists($this->_log_path) OR mkdir($this->_log_path, 0755, true);
         
-		if ( ! is_dir($this->_log_path) OR ! is_really_writable($this->_log_path)) {
-			$this->_enabled = false;
-		}
-		if (is_numeric($config['log_threshold'])) {
-			$this->_threshold = (int) $config['log_threshold'];
-		} elseif (is_array($config['log_threshold'])) {
-			$this->_threshold = 0;
-			$this->_threshold_array = array_flip($config['log_threshold']);
-		}
-        
-		if ( ! empty($config['log_date_format'])) {
-			$this->_date_fmt = $config['log_date_format'];
-		}
-        
-		if ( ! empty($config['log_file_permissions']) && is_int($config['log_file_permissions'])) {
-			$this->_file_permissions = $config['log_file_permissions'];
-		}
+        if ( ! is_dir($this->_log_path) OR ! is_really_writable($this->_log_path)) {
+            $this->_enabled = false;
+        }
+	
+        if (is_numeric($config['log_threshold'])) {
+            $this->_threshold = (int) $config['log_threshold'];
+        } elseif (is_array($config['log_threshold'])) {
+            $this->_threshold = 0;
+            $this->_threshold_array = array_flip($config['log_threshold']);
+        }
+
+        if ( ! empty($config['log_date_format'])) {
+            $this->_date_fmt = $config['log_date_format'];
+        }
+
+        if ( ! empty($config['log_file_permissions']) && is_int($config['log_file_permissions'])) {
+            $this->_file_permissions = $config['log_file_permissions'];
+        }
     }
 
     function run()
