@@ -54,12 +54,7 @@ class Log_Query
             return false;
         }
 
-        if ($this->_threshold !== 2 ||
-            $this->_threshold !== 4 ||
-            ( ! empty($this->_threshold_array) && 
-                ( ! in_array(2, $this->_threshold_array) ||
-                  ! in_array(4, $this->_threshold_array) )
-            )) {
+		if ( 2 > $this->_threshold && ! isset($this->_threshold_array[2]) ) {
             return false;
         }
 
