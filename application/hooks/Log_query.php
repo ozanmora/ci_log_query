@@ -17,6 +17,8 @@ class Log_Query
     {
         $this->CI =& get_instance();
 
+        log_message('info', 'Log_Query Hook Initialized');
+
         $config =& get_config();
 
         isset(self::$func_overload) OR self::$func_overload = (extension_loaded('mbstring') && ini_get('mbstring.func_overload'));
@@ -52,7 +54,12 @@ class Log_Query
             return false;
         }
 
-        if ($this->_threshold !== 2 || ! in_array(2, $this->_threshold_array)) {
+        if ($this->_threshold !== 2 ||
+            $this->_threshold !== 4 ||
+            ( ! empty($this->_threshold_array) && 
+                ( ! in_array(2, $this->_threshold_array) ||
+                  ! in_array(4, $this->_threshold_array) )
+            )) {
             return false;
         }
 
@@ -85,7 +92,7 @@ class Log_Query
 
         $times = $this->CI->db->query_times;
         foreach ($this->CI->db->queries as $key => $query) {
-            $message .= 'QUERY' . ' - ' . $date . ' --> ' . $times[$key] . ' | ' . $query . "\n";
+            $message .= 'QUERY' . ' - ' . $date . ' --> ' . round($times[$key], 4) . ' | ' . str_replace(array("\n", "\n\r", "\r", PHP_EOL), " ", $query) . "\n";
         }
 
         for ($written = 0, $length = self::strlen($message); $written < $length; $written += $result) {
