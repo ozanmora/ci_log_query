@@ -10,6 +10,7 @@ class Log_Query
     protected $_threshold_array = array();
     protected $_date_fmt = 'Y-m-d H:i:s';
     protected $_file_ext;
+    protected $_file_prefix = '';
     protected $_enabled = true;
     protected static $func_overload;
     
@@ -21,29 +22,30 @@ class Log_Query
 
         $config =& get_config();
 
-        isset(self::$func_overload) OR self::$func_overload = (extension_loaded('mbstring') && ini_get('mbstring.func_overload'));
+        isset(self::$func_overload) or self::$func_overload = (extension_loaded('mbstring') && ini_get('mbstring.func_overload'));
 
-        $this->_log_path = ($config['log_path'] !== '') ? rtrim($config['log_path'], '/\\').DIRECTORY_SEPARATOR : APPPATH.'logs'.DIRECTORY_SEPARATOR;
+        $this->_log_path = ($config['log_path'] !== '') ? rtrim($config['log_path'], '/\\') . DIRECTORY_SEPARATOR : APPPATH . 'logs' . DIRECTORY_SEPARATOR;
         $this->_file_ext = (isset($config['log_file_extension']) && $config['log_file_extension'] !== '') ? ltrim($config['log_file_extension'], '.') : 'php';
+        $this->_file_prefix = (isset($config['query_log_file_prefix']) && $config['query_log_file_prefix'] !== '') ? rtrim($config['query_log_file_prefix'], '-') . '-' : 'log-';
 
-        file_exists($this->_log_path) OR mkdir($this->_log_path, 0755, true);
+        file_exists($this->_log_path) or mkdir($this->_log_path, 0755, true);
 
-        if ( ! is_dir($this->_log_path) OR ! is_really_writable($this->_log_path)) {
+        if (!is_dir($this->_log_path) or !is_really_writable($this->_log_path)) {
             $this->_enabled = false;
         }
 
         if (is_numeric($config['log_threshold'])) {
-            $this->_threshold = (int) $config['log_threshold'];
+            $this->_threshold = (int)$config['log_threshold'];
         } elseif (is_array($config['log_threshold'])) {
             $this->_threshold = 0;
             $this->_threshold_array = array_flip($config['log_threshold']);
         }
 
-        if ( ! empty($config['log_date_format'])) {
+        if (!empty($config['log_date_format'])) {
             $this->_date_fmt = $config['log_date_format'];
         }
 
-        if ( ! empty($config['log_file_permissions']) && is_int($config['log_file_permissions'])) {
+        if (!empty($config['log_file_permissions']) && is_int($config['log_file_permissions'])) {
             $this->_file_permissions = $config['log_file_permissions'];
         }
     }
@@ -54,16 +56,17 @@ class Log_Query
             return false;
         }
 
-		if ( 2 > $this->_threshold && ! isset($this->_threshold_array[2]) ) {
+        if (2 > $this->_threshold && !isset($this->_threshold_array[2])) {
             return false;
         }
 
-        $filepath = $this->_log_path.'query-'.date('Y-m-d').'.'.$this->_file_ext;
+        $filepath = $this->_log_path . $this->_file_prefix . date('Y-m-d') . '.' . $this->_file_ext;
         $message = '';
-        
+
+        $queries = $this->CI->db->queries;
         $times = $this->CI->db->query_times;
-        if (!empty($times)) {
-            if ( ! file_exists($filepath)) {
+        if (!empty($queries)) {
+            if (!file_exists($filepath)) {
                 $newfile = true;
                 // Only add protection to php files
                 if ($this->_file_ext === 'php') {
@@ -71,7 +74,7 @@ class Log_Query
                 }
             }
 
-            if ( ! $fp = @fopen($filepath, 'ab')) {
+            if (!$fp = @fopen($filepath, 'ab')) {
                 return false;
             }
 
@@ -81,14 +84,15 @@ class Log_Query
             if (strpos($this->_date_fmt, 'u') !== false) {
                 $microtime_full = microtime(true);
                 $microtime_short = sprintf("%06d", ($microtime_full - floor($microtime_full)) * 1000000);
-                $date = new DateTime(date('Y-m-d H:i:s.'.$microtime_short, $microtime_full));
+                $date = new DateTime(date('Y-m-d H:i:s.' . $microtime_short, $microtime_full));
                 $date = $date->format($this->_date_fmt);
             } else {
                 $date = date($this->_date_fmt);
             }
 
-            foreach ($this->CI->db->queries as $key => $query) {
-                $message .= 'QUERY' . ' - ' . $date . ' --> ' . round($times[$key], 4) . ' | ' . str_replace(array("\n", "\n\r", "\r", PHP_EOL), " ", $query) . "\n";
+            foreach ($queries as $key => $query) {
+                $query_time = !empty($times[$key]) ? round($times[$key], 4) : 0.0000;
+                $message .= 'QUERY' . ' - ' . $date . ' --> ' . $query_time . ' | ' . str_replace(array("\n", "\n\r", "\r", PHP_EOL), " ", $query) . "\n";
             }
 
             for ($written = 0, $length = self::strlen($message); $written < $length; $written += $result) {
@@ -99,7 +103,7 @@ class Log_Query
 
             flock($fp, LOCK_UN);
             fclose($fp);
-            
+
             if (isset($newfile) && $newfile === true) {
                 chmod($filepath, $this->_file_permissions);
             }
